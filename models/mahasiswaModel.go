@@ -14,6 +14,6 @@ type Mahasiswa struct {
 	Twitter   string
 	Facebook  string
 	Linkedin  string
-	Is_delete int8 `gorm:"default:0"`
-	Payment   []Payment
+	Is_delete int8      `gorm:"default:0"`
+	Payment   []Payment `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }

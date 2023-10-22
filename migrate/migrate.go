@@ -15,5 +15,5 @@ func main() {
 	initializers.DB.AutoMigrate(&models.Room{})
 	initializers.DB.AutoMigrate(&models.Mahasiswa{})
 	initializers.DB.AutoMigrate(&models.Payment{})
-
+	initializers.DB.AutoMigrate(&models.User{})
 }

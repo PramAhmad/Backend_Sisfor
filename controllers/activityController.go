@@ -27,8 +27,8 @@ func CreateData(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Gambar tidak ditemukan"})
 		return
 	}
-	filename := fmt.Sprintf("%d%s", time.Now().Unix(), uploadedImage.Filename)
 	// validate file type
+	filename := fmt.Sprintf("%d%s", time.Now().Unix(), uploadedImage.Filename)
 	if uploadedImage.Header.Get("Content-Type") != "image/jpeg" && uploadedImage.Header.Get("Content-Type") != "image/png" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Format gambar tidak didukung"})
 		return
@@ -66,6 +66,13 @@ func CreateData(c *gin.Context) {
 }
 
 func GetData(c *gin.Context) {
+	// get token
+	token := c.Request.Header.Get("Authorization")
+	if token == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Token tidak ditemukan"})
+		return
+	}
+
 	var activity []models.Activity
 	initializers.DB.Find(&activity)
 	if len(activity) <= 0 {

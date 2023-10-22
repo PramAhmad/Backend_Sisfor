@@ -51,13 +51,54 @@ func CreatePayment(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"result": payment})
 }
 
+func GetDetailPayment(c *gin.Context) {
+
+	var payment models.Payment
+	id := c.Param("id")
+	result := initializers.DB.Preload("Room").Preload("Mahasiswa").First(&payment, id).Where("is_delete", 0)
+	if result.Error != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Tidak ada data"})
+		return
+	}
+	if payment.Is_delete == 1 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Payment Telah Di Hapus"})
+		return
+	}
+	mahasiswa := gin.H{
+		"id":    payment.Mahasiswa.ID,
+		"npm":   payment.Mahasiswa.Npm,
+		"nama":  payment.Mahasiswa.Nama,
+		"kelas": payment.Mahasiswa.Kelas,
+	}
+	room := gin.H{
+		"id":    payment.Room.ID,
+		"title": payment.Room.Title,
+		"desc":  payment.Room.Desc,
+	}
+	json := gin.H{
+		"id":          payment.ID,
+		"total_bayar": payment.Total,
+		"mahasiswa":   mahasiswa,
+		"room":        room,
+		"addby":       payment.Addby,
+		"is_delete":   payment.Is_delete,
+	}
+	// marsal json
+
+	c.JSON(http.StatusOK, gin.H{"result": json})
+}
+
 func GetPaymentByRoom(c *gin.Context) {
 	var room models.Room
 
 	id := c.Param("id")
 
-	result := initializers.DB.Preload("Payment").First(&room, "id = ?", id)
-
+	result := initializers.DB.Preload("Payment").First(&room, "id = ?", id).Order("created_at desc")
+	queryroom := gin.H{
+		"id":    room.ID,
+		"title": room.Title,
+		"desc":  room.Desc,
+	}
 	if result.Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Tidak ada data"})
 		return
@@ -67,6 +108,7 @@ func GetPaymentByRoom(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Tidak ada data"})
 		return
 	}
+
 	// slice mahasiswa
 	var paymentsWithMahasiswaInfo []gin.H
 
@@ -93,7 +135,7 @@ func GetPaymentByRoom(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"room":   room.Title,
+		"room":   queryroom,
 		"count":  len(paymentsWithMahasiswaInfo),
 		"result": paymentsWithMahasiswaInfo,
 	})
@@ -106,42 +148,105 @@ type PaymentResult struct {
 }
 
 func GetPaymentByMahasiswa(c *gin.Context) {
-	var payments []models.Payment
-
-	id := c.Param("id")
-
-	result := initializers.DB.Preload("Room").Where("mahasiswa_id = ?", id).Find(&payments)
-
+	var mahasiswa models.Mahasiswa
+	result := initializers.DB.Preload("Payment").First(&mahasiswa, "id = ?", c.Param("id"))
 	if result.Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Tidak ada data"})
 		return
 	}
-
-	if len(payments) == 0 {
+	if len(mahasiswa.Payment) == 0 {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Tidak ada data"})
 		return
 	}
 
-	var paymentResults []PaymentResult
-
-	for _, payment := range payments {
-		paymentResult := PaymentResult{
+	var paymentsWithRoomInfo []PaymentResult
+	for _, payment := range mahasiswa.Payment {
+		roomID := payment.RoomID
+		var room models.Room
+		initializers.DB.First(&room, roomID)
+		paymentInfo := PaymentResult{
 			Total: payment.Total,
+			Room:  room,
 			Addby: payment.Addby,
-			Room:  payment.Room,
 		}
-		paymentResults = append(paymentResults, paymentResult)
+
+		paymentsWithRoomInfo = append(paymentsWithRoomInfo, paymentInfo)
+
+	}
+	jsonmahasiswa := gin.H{
+		"id":    mahasiswa.ID,
+		"npm":   mahasiswa.Npm,
+		"nama":  mahasiswa.Nama,
+		"kelas": mahasiswa.Kelas,
 	}
 
-	var mahasiswa models.Mahasiswa
-	initializers.DB.First(&mahasiswa, id)
-	if mahasiswa.Is_delete == 1 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Mahasiswa Telah Di Hapus"})
+	c.JSON(http.StatusOK, gin.H{
+		"mahasiswa": jsonmahasiswa,
+		"count":     len(paymentsWithRoomInfo),
+		"result":    paymentsWithRoomInfo,
+	})
+
+}
+
+func UpdatePayment(c *gin.Context) {
+	var payment models.Payment
+	id := c.Param("id")
+	result := initializers.DB.Preload("Mahasiswa").Preload("Room").First(&payment, id)
+	if result.Error != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Payment tidak di temukan"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"count":     len(paymentResults),
-		"mahasiswa": mahasiswa,
-		"result":    paymentResults,
-	})
+	var body struct {
+		Total int64 `json:"total"`
+		Addby int64 `json:"addby"`
+	}
+	if err := c.Bind(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	payment.Total = body.Total
+	payment.Addby = body.Addby
+	result = initializers.DB.Save(&payment)
+	if result.Error != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Gagal mengupdate data"})
+		return
+	}
+	mahasiswa := gin.H{
+		"id":    payment.Mahasiswa.ID,
+		"npm":   payment.Mahasiswa.Npm,
+		"nama":  payment.Mahasiswa.Nama,
+		"kelas": payment.Mahasiswa.Kelas,
+	}
+	room := gin.H{
+		"id":    payment.Room.ID,
+		"title": payment.Room.Title,
+		"desc":  payment.Room.Desc,
+	}
+
+	json := gin.H{
+		"id":          payment.ID,
+		"total_bayar": payment.Total,
+		"mahasiswa":   mahasiswa,
+		"room":        room,
+		"addby":       payment.Addby,
+		"is_delete":   payment.Is_delete,
+	}
+	c.JSON(http.StatusOK, gin.H{"result": json})
+}
+
+func DeletePayment(c *gin.Context) {
+	var payment models.Payment
+	id := c.Param("id")
+	result := initializers.DB.First(&payment, id)
+	if result.Error != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Payment tidak di temukan"})
+		return
+	}
+	payment.Is_delete = 1
+	result = initializers.DB.Save(&payment)
+	if result.Error != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Gagal menghapus data"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"result": "Payment Berhasil Di Hapus"})
 }

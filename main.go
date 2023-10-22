@@ -2,6 +2,7 @@ package main
 
 import (
 	"backend-berita/controllers"
+	"backend-berita/controllers/auth"
 	"backend-berita/initializers"
 
 	"github.com/gin-gonic/gin"
@@ -21,27 +22,40 @@ func main() {
 		c.Next()
 	})
 	// activity
+	// secured
+	authGroup := r.Group("/")
+	authGroup.Use(auth.Auth())
+
 	r.POST("/activity", controllers.CreateData)
 	r.GET("/activity", controllers.GetData)
-	r.GET("/activity/:id", controllers.GetDetail)
-	r.PUT("/activity/:id", controllers.UpdateData)
-	r.DELETE("/activity/:id")
+	authGroup.GET("/activity/:id", controllers.GetDetail)
+	authGroup.PUT("/activity/:id", controllers.UpdateData)
+	authGroup.DELETE("/activity/:id")
 	// room
-	r.POST("/room", controllers.CreateRoom)
-	r.GET("/room", controllers.GetRoom)
-	r.GET("/room/:id", controllers.GetDetailRoom)
-	r.PUT("/room/:id", controllers.UpdateRoom)
-	r.DELETE("/room/:id", controllers.DeleteRoom)
+	authGroup.POST("/room", controllers.CreateRoom)
+	authGroup.GET("/room", controllers.GetRoom)
+	authGroup.GET("/room/:id", controllers.GetDetailRoom)
+	authGroup.PUT("/room/:id", controllers.UpdateRoom)
+	authGroup.DELETE("/room/:id", controllers.DeleteRoom)
 
 	// mahasiswa
 	r.POST("/mahasiswa", controllers.CreateMahasiswa)
 	r.GET("/mahasiswa", controllers.GetMahasiswa)
 	r.GET("/mahasiswa/:id", controllers.GetDetailMahasiswa)
+	r.PUT("/mahasiswa/:id", controllers.UpdateMahasiswa)
+	r.GET("/payment/mahasiswa/:id", controllers.GetPaymentByMahasiswa)
 
 	//payment
 	r.POST("/payment", controllers.CreatePayment)
-	r.GET("/payment/:id", controllers.GetPaymentByRoom)
-	r.GET("/payment/maha/:id", controllers.GetPaymentByMahasiswa)
+	r.GET("/payment/:id", controllers.GetDetailPayment)
+	r.GET("/payment/room/:id", controllers.GetPaymentByRoom)
+	r.PUT("/payment/:id", controllers.UpdatePayment)
+	r.DELETE("/payment/:id", controllers.DeletePayment)
+
+	// Auth user
+	r.POST("/register", controllers.Register)
+	r.POST("/login", controllers.GenerateToken)
+
 	r.Run()
 
 }
