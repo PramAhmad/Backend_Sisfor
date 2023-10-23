@@ -186,3 +186,22 @@ func UpdateMahasiswa(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"result": mahasiswa})
 
 }
+
+func DeleteMahasiswa(c *gin.Context) {
+	var mahasiswa models.Mahasiswa
+
+	result := initializers.DB.First(&mahasiswa, c.Param("id"))
+
+	if result.Error != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Mahasiswa Tidak Di Temukan"})
+		return
+	}
+	// update is_delete to 1
+	mahasiswa.Is_delete = 1
+	result = initializers.DB.Save(&mahasiswa)
+	if result.Error != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Gagal menghapus mahasiswa"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"result": mahasiswa})
+}

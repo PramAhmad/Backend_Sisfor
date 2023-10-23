@@ -30,11 +30,6 @@ func CreateRoom(c *gin.Context) {
 }
 
 func GetRoom(c *gin.Context) {
-	// jika role di header  bukan admin maka tidak bisa mengakses
-	if c.GetHeader("Role") != "admin" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-		return
-	}
 
 	var room []models.Room
 	initializers.DB.Find(&room, "is_delete = ?", 0)
@@ -46,6 +41,11 @@ func GetRoom(c *gin.Context) {
 }
 
 func GetDetailRoom(c *gin.Context) {
+	if c.GetHeader("Role") != "admin" || c.GetHeader("Role") != "bendahara" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
 	var room models.Room
 	id := c.Param("id")
 	result := initializers.DB.First(&room, id)

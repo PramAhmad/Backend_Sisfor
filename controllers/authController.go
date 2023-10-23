@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func Register(c *gin.Context) {
@@ -19,29 +20,36 @@ func Register(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	// required
+
 	if body.Username == "" || body.Password == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Username, Password Dan Role Harus Di Isi"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Username, Password, and Role must be provided"})
 		return
 	}
-	// save  db
+
+	// Hash the password before saving it in the database
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(body.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash the password"})
+		return
+	}
 	user := models.User{
 		Username: body.Username,
-		Password: body.Password,
+		Password: string(hashedPassword),
 		Role:     body.Role,
 	}
 	result := initializers.DB.Create(&user)
 	if result.Error != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Gagal membuat user"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to create the user"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"result": user})
 
+	c.JSON(http.StatusOK, gin.H{"result": user})
 }
 
 type TokenRequest struct {
 	Username string `json:"Username"`
 	Role     int8   `json:"role"`
+	Password string `json:"password"`
 }
 
 func GenerateToken(context *gin.Context) {
@@ -52,12 +60,18 @@ func GenerateToken(context *gin.Context) {
 		context.Abort()
 		return
 	}
-	record := initializers.DB.Where("username = ?", request.Username).First(&user)
-	if record.Error != nil {
-		context.JSON(http.StatusInternalServerError, gin.H{"error": record.Error.Error()})
-		context.Abort()
+
+	if err := initializers.DB.Where("username = ?", request.Username).First(&user).Error; err != nil {
+		context.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid username or password"})
 		return
 	}
+	// validasi login
+	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(request.Password))
+	if err != nil {
+		context.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid username or password"})
+		return
+	}
+	// generate token
 
 	tokenString, err := auth.GenerateJWT(user.Role, user.Username)
 	if err != nil {
@@ -84,7 +98,8 @@ func GenerateToken(context *gin.Context) {
 		"role": role})
 }
 
-func DestroyToken(context *gin.Context) {
-
-	context.JSON(http.StatusOK, gin.H{"message": "Token destroyed"})
+func Logout(context *gin.Context) {
+	context.Header("Authorization", "")
+	context.Header("role", "")
+	context.JSON(http.StatusOK, gin.H{"message": "Logout Success"})
 }

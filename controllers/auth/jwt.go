@@ -87,23 +87,13 @@ func Auth() gin.HandlerFunc {
 
 		role := claims.Role
 		username := claims.Username
+
+		// role admin
+
 		context.Set("role", role)
 		context.Set("username", username)
 
 		// Tambahkan peran ke header
-		// switchcase the role 1=admin 2=bendahara 3= mahasiswa
-		var roleHeader string
-		switch role {
-		case 1:
-			roleHeader = "admin"
-		case 2:
-			roleHeader = "bendahara"
-		case 3:
-			roleHeader = "mahasiswa"
-
-			context.Header("role", roleHeader)
-			context.Next()
-
-		}
+		context.Next()
 	}
 }

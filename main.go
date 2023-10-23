@@ -4,6 +4,7 @@ import (
 	"backend-berita/controllers"
 	"backend-berita/controllers/auth"
 	"backend-berita/initializers"
+	"backend-berita/middleware"
 
 	"github.com/gin-gonic/gin"
 )
@@ -15,35 +16,38 @@ func init() {
 
 func main() {
 	r := gin.Default()
-	// allow cross for everything
 
-	r.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Next()
-	})
+	// bendahara route
+	bendaharaRouter := r.Group("/")
+	bendaharaRouter.Use(auth.Auth(), middleware.IsBendahara())
+	// admin route
+	adminRouter := r.Group("/")
+	adminRouter.Use(auth.Auth(), middleware.IsAdmin())
+	// mahasiswa route
+	mahasiswaRouter := r.Group("/")
+	mahasiswaRouter.Use(auth.Auth(), middleware.IsMahasiswa())
+
 	// activity
-	// secured
-	authGroup := r.Group("/")
-	authGroup.Use(auth.Auth())
-
 	r.POST("/activity", controllers.CreateData)
 	r.GET("/activity", controllers.GetData)
-	authGroup.GET("/activity/:id", controllers.GetDetail)
-	authGroup.PUT("/activity/:id", controllers.UpdateData)
-	authGroup.DELETE("/activity/:id")
+	r.GET("/activity/:id", controllers.GetDetail)
+	bendaharaRouter.PUT("/activity/:id", controllers.UpdateData)
+	adminRouter.DELETE("/activity/:id")
+
 	// room
-	authGroup.POST("/room", controllers.CreateRoom)
-	authGroup.GET("/room", controllers.GetRoom)
-	authGroup.GET("/room/:id", controllers.GetDetailRoom)
-	authGroup.PUT("/room/:id", controllers.UpdateRoom)
-	authGroup.DELETE("/room/:id", controllers.DeleteRoom)
+	r.POST("/room", controllers.CreateRoom)
+	bendaharaRouter.GET("/room", controllers.GetRoom)
+	bendaharaRouter.GET("/room/:id", controllers.GetDetailRoom)
+	bendaharaRouter.PUT("/room/:id", controllers.UpdateRoom)
+	bendaharaRouter.DELETE("/room/:id", controllers.DeleteRoom)
 
 	// mahasiswa
-	r.POST("/mahasiswa", controllers.CreateMahasiswa)
-	r.GET("/mahasiswa", controllers.GetMahasiswa)
+	adminRouter.POST("/mahasiswa", controllers.CreateMahasiswa)
+	adminRouter.GET("/mahasiswa", controllers.GetMahasiswa)
 	r.GET("/mahasiswa/:id", controllers.GetDetailMahasiswa)
 	r.PUT("/mahasiswa/:id", controllers.UpdateMahasiswa)
 	r.GET("/payment/mahasiswa/:id", controllers.GetPaymentByMahasiswa)
+	adminRouter.DELETE("/mahasiswa/:id", controllers.DeleteMahasiswa)
 
 	//payment
 	r.POST("/payment", controllers.CreatePayment)
@@ -52,10 +56,14 @@ func main() {
 	r.PUT("/payment/:id", controllers.UpdatePayment)
 	r.DELETE("/payment/:id", controllers.DeletePayment)
 
+	// masukan
+	mahasiswaRouter.GET("/masukan", controllers.GetMasukan)
+	r.POST("/masukan", controllers.CreateMasukan)
+
 	// Auth user
 	r.POST("/register", controllers.Register)
 	r.POST("/login", controllers.GenerateToken)
-
+	r.POST("/logout", controllers.Logout)
 	r.Run()
 
 }
