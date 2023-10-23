@@ -1,8 +1,8 @@
 package main
 
 import (
-	"backend-berita/initializers"
-	"backend-berita/models"
+	"Backend_SI/initializers"
+	"Backend_SI/models"
 )
 
 func init() {

@@ -1,9 +1,9 @@
 package controllers
 
 import (
-	"backend-berita/controllers/auth"
-	"backend-berita/initializers"
-	"backend-berita/models"
+	"Backend_SI/controllers/auth"
+	"Backend_SI/initializers"
+	"Backend_SI/models"
 	"net/http"
 
 	"github.com/gin-gonic/gin"

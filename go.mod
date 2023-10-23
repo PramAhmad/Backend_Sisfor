@@ -1,4 +1,4 @@
-module backend-berita
+module Backend_SI
 
 go 1.20
 

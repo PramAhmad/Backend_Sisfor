@@ -1,10 +1,10 @@
 package main
 
 import (
-	"backend-berita/controllers"
-	"backend-berita/controllers/auth"
-	"backend-berita/initializers"
-	"backend-berita/middleware"
+	"Backend_SI/controllers"
+	"Backend_SI/controllers/auth"
+	"Backend_SI/initializers"
+	"Backend_SI/middleware"
 
 	"github.com/gin-gonic/gin"
 )
