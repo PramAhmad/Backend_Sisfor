@@ -66,12 +66,6 @@ func CreateData(c *gin.Context) {
 }
 
 func GetData(c *gin.Context) {
-	// get token
-	token := c.Request.Header.Get("Authorization")
-	if token == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Token tidak ditemukan"})
-		return
-	}
 
 	var activity []models.Activity
 	initializers.DB.Find(&activity)
